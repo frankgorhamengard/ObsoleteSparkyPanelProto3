@@ -17,6 +17,8 @@ boolean runTimeMonitorEnabled = false;
 // D8 - AltSoftSerial RX
 // D9 - AltSoftSerial TX
 
+#include <Wire.h>
+
 #include <EasyTransfer.h>
 //create two objects
 EasyTransfer ETin, ETout; 
@@ -44,10 +46,10 @@ TO_SPARKY_DATA_STRUCTURE txdata;
 #define L_STICK_BUTTON  2
 
 #define L_STICK_X      0    // left stick attached to A0,A1,D2
-#define L_STICK_Y      1
+//#define L_STICK_Y      1
 #define R_STICK_X      2    //right stick attached to A2,A3,D3
 #define R_STICK_Y      3
-#define SHOOTERSPEED 4
+#define SHOOTERSPEED 1
 
 unsigned long triggerTime;
 unsigned long headingTime;
@@ -121,9 +123,11 @@ void setup(){
 }
 /////////////////////  MAIN LOOP  /////////////////////////////
 void loop(){
+  static unsigned long wireTimer1;
+  
   // read our potentiometers and buttons and store raw data in data structure for transmission
   txdata.stickLy = ( (analogRead(L_STICK_X)+stickLxOffset)<<2) - 1536;
-  txdata.stickLx = ( (analogRead(L_STICK_Y)+stickLyOffset)<<2) - 1536;
+  txdata.stickLx = ( (analogRead(L_STICK_X)+stickLyOffset)<<2) - 1536; // ly not used
   txdata.stickLbutton = !digitalRead(L_STICK_BUTTON);
   txdata.stickRy = ( (analogRead(R_STICK_X)+stickRxOffset)<<2) - 1536;
   txdata.stickRx = ( (analogRead(R_STICK_Y)+stickRyOffset)<<2) - 1536;
@@ -216,6 +220,8 @@ void loop(){
         altser.print( " " );
         altser.print( txdata.stickRy );  
         altser.print( " " );
+        altser.print( wireTimer1 );  
+        altser.print( " " );
         altser.println( rxdata.spare2 );
        
       } else {
@@ -239,67 +245,11 @@ void loop(){
       setLED( 4, buttonValue);
     }  
   }
+  wireTimer1 = millis();
+  Wire.beginTransmission(0x71);  // transmit to device #9
+  Wire.write("x is 11");        // sends five bytes
+//  Wire.write(x);              // sends one byte
+  Wire.endTransmission();     // stop transmitting
+  wireTimer1 = millis() - wireTimer1;
 }
 
-/*
- * 
- * 
-Controller Connections 
-Legend: 
-A - Analog input
-D - Digital Input
-Left stick:
-===========
-ground
-5V
-xval = A0
-yval = A1
-button = D2
-Right Stick:
-============
-ground
-5v
-xval = A2
-yval = A3
-button = D3
-===============
-Shooter Knob = A4
-  -> has a 5v pin
-  -> signal
-  -> has a ground pin
-  ===============
-Intake Button = D7
-  -> has a pin to ground
-==========================
-Shoot Button = D8
-  -> has a pin to ground
-===========================  
-Enable Toggle = D12
-  -> has a pin to ground
-====================================
-shooter knob   5v,sig,GND for a pot,  3 others  2-pin GND,sig.    
- D2,3 for stick buttons. 
- Put LEDs and test switch on others D4 - D9. 
-
-
-SYSTEM_ENABLE   
-SHOOT_BUTTON    
-INTAKE_BUTTON   
-TEST_SWITCH     
-R-STICK_BUTTON  
-L_STICK_BUTTON 
-
-#define BLINKLED        13 
-#define PANEL_LED_5     11
-#define PANEL_LED_4     10
-#define PANEL_LED_3     9
-#define PANEL_LED_2     6
-#define PANEL_LED_1     5
-
-
-L_STICK_X
-L_STICK_Y
-R_STICK_X
-R_STICK_Y
-SHOOTERSPEED 
-*/
