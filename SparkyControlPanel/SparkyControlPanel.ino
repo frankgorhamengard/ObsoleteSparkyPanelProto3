@@ -69,7 +69,7 @@ void setLED(int LEDnum, unsigned int brightness) {
   if ( brightness > 255 ) brightness = 255;
   unsigned long brightness_l = brightness & 255; 
   //  index to pins, use panelLedArr   ,  value to write is non-linear
-  if ( 0 <= LEDnum < 5 ) {
+  if ( 0 <= LEDnum && LEDnum < 5 ) {
     int LEDoutput = min( 255-((brightness_l+7)/8), (255-brightness_l)*3 );
    analogWrite( panelLedArr[LEDnum], LEDoutput );
   }
@@ -85,6 +85,10 @@ void setup(){
   ETout.begin(details(txdata), &Serial);
 
   altser.begin(600);
+
+  // Wire. is a TwoWire type object declared in the include file Wire.h
+  Wire.begin(); // join i2c bus (address optional for master)
+  // 2wire code is at the end of loop - end of this file
 
   //  init LEDs     //////////////////////////
   for (int i=0; i<5; i++) {
@@ -106,7 +110,7 @@ void setup(){
   triggerTime = millis() + 3000;  // 3 seconds from now
   delay(2000);
   altser.println();
-  altser.print("Sparky Control Panel    :Created ");
+  altser.print("Sparky Control Panel proto3    :Created ");
   altser.print( __DATE__ );
   altser.print(" ");
   altser.println( __TIME__ );
@@ -123,7 +127,7 @@ void setup(){
 }
 /////////////////////  MAIN LOOP  /////////////////////////////
 void loop(){
-  static unsigned long wireTimer1;
+  static unsigned long wireTimer0,wireTimer1;
   
   // read our potentiometers and buttons and store raw data in data structure for transmission
   txdata.stickLy = ( (analogRead(L_STICK_X)+stickLxOffset)<<2) - 1536;
@@ -220,7 +224,7 @@ void loop(){
         altser.print( " " );
         altser.print( txdata.stickRy );  
         altser.print( " " );
-        altser.print( wireTimer1 );  
+        altser.print( wireTimer0 );  
         altser.print( " " );
         altser.println( rxdata.spare2 );
        
@@ -245,11 +249,19 @@ void loop(){
       setLED( 4, buttonValue);
     }  
   }
-  wireTimer1 = millis();
-  Wire.beginTransmission(0x71);  // transmit to device #9
-  Wire.write("x is 11");        // sends five bytes
-//  Wire.write(x);              // sends one byte
-  Wire.endTransmission();     // stop transmitting
-  wireTimer1 = millis() - wireTimer1;
+
+  ///////////////////////  TWI code for 7segment display interface ///////////
+  if ( wireTimer1 < (millis() - 500) ) {
+    wireTimer1 = millis(); // reset
+    wireTimer0 = micros();
+    Wire.beginTransmission(0x71);  // transmit to device #9
+    Wire.write("x is 11",5);        // sends five bytes
+    //  Wire.write(0x63);              // sends one byte
+
+    uint8_t xRet;
+    xRet = Wire.endTransmission(false) ;     // completes send cmd, starts interrupt to do send, wait is false
+    if ( xRet )    altser.print( xRet ) ;
+    wireTimer0 = micros() - wireTimer0;     // how long did this take?
+  }
 }
 
