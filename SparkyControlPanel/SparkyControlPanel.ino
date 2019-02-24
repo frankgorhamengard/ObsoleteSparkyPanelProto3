@@ -244,7 +244,12 @@ void loop(){
     runTimeMonitorEnabled = false;
     if ( now > updateDue ) {
       updateDue = now + 100; // 10 updates per second, max
-      setLED( 0, (analogRead(L_STICK_X)+3)>>2);
+      //setLED( 0, (analogRead(L_STICK_X)+3)>>2);
+      if ( txdata.intake ) { //rxdata.ballready ) {
+        setLED( 0, 255 );
+      } else {
+        setLED( 0, 30 );
+      }
       setLED( 1, (analogRead(R_STICK_X)+3)>>2);
       setLED( 4, buttonValue);
     }  
@@ -252,11 +257,13 @@ void loop(){
 
   ///////////////////////  TWI code for 7segment display interface ///////////
   if ( wireTimer1 < (millis() - 500) ) {
+    static char myBuf[30] = "transmit to address 0x22: ";
+    static unsigned char myByte;
     wireTimer1 = millis(); // reset
     wireTimer0 = micros();
-    Wire.beginTransmission(0x71);  // transmit to device #9
-    Wire.write("x is 11",5);        // sends five bytes
-    //  Wire.write(0x63);              // sends one byte
+    Wire.beginTransmission(0x22);  // transmit to device #22
+    Wire.write(myBuf,strlen(myBuf));        // sends bytes
+    Wire.write(myByte++);              // sends one byte
 
     uint8_t xRet;
     xRet = Wire.endTransmission(false) ;     // completes send cmd, starts interrupt to do send, wait is false
