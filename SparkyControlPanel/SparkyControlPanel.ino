@@ -18,6 +18,10 @@ boolean runTimeMonitorEnabled = false;
 // D9 - AltSoftSerial TX
 
 #include <Wire.h>
+#include <Adafruit_GFX.h>
+#include "Adafruit_LEDBackpack.h"
+
+Adafruit_7segment matrix = Adafruit_7segment();
 
 #include <EasyTransfer.h>
 //create two objects
@@ -90,6 +94,8 @@ void setup(){
   Wire.begin(); // join i2c bus (address optional for master)
   // 2wire code is at the end of loop - end of this file
 
+  matrix.begin(0x70);
+  
   //  init LEDs     //////////////////////////
   for (int i=0; i<5; i++) {
     pinMode( panelLedArr[i], OUTPUT);
@@ -257,17 +263,21 @@ void loop(){
 
   ///////////////////////  TWI code for 7segment display interface ///////////
   if ( wireTimer1 < (millis() - 500) ) {
-    static char myBuf[30] = "transmit to address 0x22: ";
-    static unsigned char myByte;
+    //static char myBuf[30] = "transmit to address 0x22: ";
+    //static unsigned char myByte;
     wireTimer1 = millis(); // reset
     wireTimer0 = micros();
-    Wire.beginTransmission(0x22);  // transmit to device #22
-    Wire.write(myBuf,strlen(myBuf));        // sends bytes
-    Wire.write(myByte++);              // sends one byte
+    //Wire.beginTransmission(0x70);  // transmit to 7 seg device
+    //Wire.write(myBuf,strlen(myBuf));        // sends bytes
+    //Wire.write(myByte++);              // sends one byte
 
-    uint8_t xRet;
-    xRet = Wire.endTransmission(false) ;     // completes send cmd, starts interrupt to do send, wait is false
-    if ( xRet )    altser.print( xRet ) ;
+  // print a floating point 
+  matrix.print( ((double)rxdata.supplyvoltagereading) / 10.0 );
+  matrix.writeDisplay();
+
+    //uint8_t xRet;
+    //xRet = Wire.endTransmission(false) ;     // completes send cmd, starts interrupt to do send, wait is false
+    //if ( xRet )    altser.print( xRet ) ;
     wireTimer0 = micros() - wireTimer0;     // how long did this take?
   }
 }
