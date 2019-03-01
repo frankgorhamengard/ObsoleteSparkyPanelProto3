@@ -43,8 +43,8 @@ TO_SPARKY_DATA_STRUCTURE txdata;
 //  #define PANEL_LED_3     9
 #define SHOOT_BUTTON    8
 #define INTAKE_BUTTON   7
-//  #define PANEL_LED_2     6
-//  #define PANEL_LED_1     5
+  #define INTAKEBUTTON_LED     0
+  #define SHOOTBUTTON_LED     1
 #define TEST_SWITCH     4
 #define R_STICK_BUTTON  3
 #define L_STICK_BUTTON  2
@@ -199,13 +199,7 @@ void loop(){
     if ( testnow >= triggerTime ) {
       triggerTime = testnow + 2000;
       int value1 = (analogRead(SHOOTERSPEED)+3)>>2;
-      if ( value1 < 128 ) {
-        setLED( 0, (127-value1)*2 );
-        setLED( 1, 0);
-      } else {
-        setLED( 0, 0);
-        setLED( 1, (value1-128)*2 );
-      }
+      setLED( 3, value1 );
       setLED( 4, buttonValue);
 
       // ****  AltSerial TESTING ****
@@ -218,7 +212,7 @@ void loop(){
         altser.print( ", " );
         altser.print( rxdata.shooterspeedecho );
         altser.print( ", " );
-        altser.print( rxdata.buttonstate );
+        altser.print( txdata.enabled );
         altser.print( ", " );
         altser.print( rxdata.ballready );
         altser.print( " [" );
@@ -242,42 +236,72 @@ void loop(){
   }
 //////////////////////   NORMAL DISPLAY   ////////////////////////
   else {  // test mode OFF, show main robot control signals
-    static unsigned long updateDue = 0;
-    unsigned long now = millis();
+    static unsigned long updateDue;
+    unsigned long now;
+    static int phase;
     if ( runTimeMonitorEnabled ) {
       altser.println("Monitor Deactivated");
     }
     runTimeMonitorEnabled = false;
+    now = millis();
     if ( now > updateDue ) {
       updateDue = now + 100; // 10 updates per second, max
-      //setLED( 0, (analogRead(L_STICK_X)+3)>>2);
-      if ( txdata.intake ) { //rxdata.ballready ) {
-        setLED( 0, 255 );
+      phase++; phase &= 7;
+      if ( txdata.enabled ) {
+        if ( rxdata.ballready ) {
+          setLED( INTAKEBUTTON_LED, 0 );
+          setLED( SHOOTBUTTON_LED, 255 );
+        } else {
+          if ( txdata.intake ) {
+            // intake button pushed blink LED fast
+            if ( phase & 1 ) {
+              setLED( INTAKEBUTTON_LED, 255 );
+            } else {
+              setLED( INTAKEBUTTON_LED, 0  );
+            }
+          } else {
+            // intake button not pushed fade LED slow
+            if ( phase < 4 ) {
+              setLED( INTAKEBUTTON_LED, 210 + (phase * 10) );
+            } else {
+              setLED( INTAKEBUTTON_LED, 210 + ( 7-phase) * 10);
+            }
+          }
+          setLED( SHOOTBUTTON_LED, 0 );
+        }  
       } else {
-        setLED( 0, 30 );
+        setLED( INTAKEBUTTON_LED, 30 );
+        setLED( SHOOTBUTTON_LED, 30 );
       }
-      setLED( 1, (analogRead(R_STICK_X)+3)>>2);
+      setLED( 2, (analogRead(R_STICK_X)+3)>>2);
       setLED( 4, buttonValue);
     }  
   }
 
   ///////////////////////  TWI code for 7segment display interface ///////////
   if ( wireTimer1 < (millis() - 500) ) {
-    //static char myBuf[30] = "transmit to address 0x22: ";
-    //static unsigned char myByte;
+    int calctemp;
+    static int speeddisplay;
+    
     wireTimer1 = millis(); // reset
     wireTimer0 = micros();
-    //Wire.beginTransmission(0x70);  // transmit to 7 seg device
-    //Wire.write(myBuf,strlen(myBuf));        // sends bytes
-    //Wire.write(myByte++);              // sends one byte
 
-  // print a floating point 
-  matrix.print( ((double)rxdata.supplyvoltagereading) / 10.0 );
-  matrix.writeDisplay();
+    // print a floating point 
+    //matrix.print( ((double)txdata.shooterspeed) / 100000.0 );  //rxdata.supplyvoltagereading
 
-    //uint8_t xRet;
-    //xRet = Wire.endTransmission(false) ;     // completes send cmd, starts interrupt to do send, wait is false
-    //if ( xRet )    altser.print( xRet ) ;
+    calctemp = rxdata.supplyvoltagereading / 106; //tenths of a volt resolution
+    matrix.writeDigitNum(0, (calctemp/10) % 10 , true);
+    matrix.writeDigitNum(1, calctemp % 10 , false);
+    matrix.drawColon(true);
+    calctemp = (txdata.shooterspeed * 15) / 155;
+    if ( abs(calctemp-speeddisplay)>1 ) {
+      speeddisplay = calctemp;
+    }
+    matrix.writeDigitNum(3, (speeddisplay / 10) , false);
+    matrix.writeDigitNum(4, speeddisplay % 10, false);
+ 
+    matrix.writeDisplay();
+
     wireTimer0 = micros() - wireTimer0;     // how long did this take?
   }
 }
