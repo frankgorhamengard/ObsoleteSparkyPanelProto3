@@ -95,15 +95,30 @@ void setup(){
   // 2wire code is at the end of loop - end of this file
 
   matrix.begin(0x70);
+
+  matrix.writeDigitNum(0, 8 , true);
+  matrix.writeDigitNum(1, 8 , true);
+  matrix.drawColon(true);
+  matrix.writeDigitNum(3, 8 , true);
+  matrix.writeDigitNum(4, 8 , true);
+  matrix.writeDisplay();
   
   //  init LEDs     //////////////////////////
   for (int i=0; i<5; i++) {
     pinMode( panelLedArr[i], OUTPUT);
     setLED( i, 255); // on
-    delay(1000);
+    delay(1500);
     setLED( i, 0);
   }
-  
+
+  matrix.writeDigitRaw(0, 0 );
+  matrix.writeDigitRaw(1, 0 );
+  matrix.drawColon(false);
+  matrix.writeDigitRaw(3, 0 );
+  matrix.writeDigitRaw(4, 0 );
+  matrix.writeDisplay();
+
+ 
   // init inputs and enable pullup
   pinMode(DRIVE_MODE      , INPUT_PULLUP); // 13
   pinMode(SYSTEM_ENABLE   , INPUT_PULLUP); // 12 LOW is ENABLEd
@@ -289,7 +304,7 @@ void loop(){
     // print a floating point 
     //matrix.print( ((double)txdata.shooterspeed) / 100000.0 );  //rxdata.supplyvoltagereading
 
-    calctemp = rxdata.supplyvoltagereading / 106; //tenths of a volt resolution
+    calctemp = (txdata.shooterspeed*15) / 105; //  (rxdata.supplyvoltagereading*15) / 105; //tenths of a volt resolution
     matrix.writeDigitNum(0, (calctemp/10) % 10 , true);
     matrix.writeDigitNum(1, calctemp % 10 , false);
     matrix.drawColon(true);
