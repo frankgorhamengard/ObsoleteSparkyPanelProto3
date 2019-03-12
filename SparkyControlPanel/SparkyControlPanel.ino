@@ -47,13 +47,13 @@ TO_SPARKY_DATA_STRUCTURE txdata;
   #define SHOOTBUTTON_LED     1
 #define TEST_SWITCH     4
 #define R_STICK_BUTTON  3
-#define L_STICK_BUTTON  2
+#define HC05_POWER_ON_LOW_2  2
 
-#define L_STICK_X      0    // left stick attached to A0,A1,D2
+#define L_STICK_X      2    // left stick attached to A0,A1,D2
 //#define L_STICK_Y      1
-#define R_STICK_X      2    //right stick attached to A2,A3,D3
-#define R_STICK_Y      3
-#define SHOOTERSPEED 1
+#define R_STICK_X      0    //right stick attached to A2,A3,D3
+#define R_STICK_Y      1
+#define SHOOTERSPEED 3
 
 unsigned long triggerTime;
 unsigned long headingTime;
@@ -61,10 +61,10 @@ const int panelLedArr[5] = {5,6,9,10,11}; //map of wired pins to LEDs
 long int messageCounter = 0;
 
 //int stickLxOffset, stickLyOffset, stickRxOffset, stickRyOffset;
-const int stickLxOffset = 512 - 243; //analogRead(L_STICK_Y); //offset = 512 - read null stick 
+const int stickLxOffset = 512 - 306; //analogRead(L_STICK_Y); //offset = 512 - read null stick 
 const int stickLyOffset = 512 - 306; //analogRead(L_STICK_X);
 const int stickRxOffset = 512 - 235; //analogRead(R_STICK_Y);
-const int stickRyOffset = 512 - 161; //analogRead(R_STICK_X);
+const int stickRyOffset = 512 - 163; //analogRead(R_STICK_X);
 
 /////////////////////////////////////////////////////////////////////////////
 // FUNCTION: setLED,   returns nothing
@@ -81,6 +81,9 @@ void setLED(int LEDnum, unsigned int brightness) {
 /////////////////////////////////////////////////////////////////////////////////
 // called once at start
 void setup(){
+  digitalWrite(HC05_POWER_ON_LOW_2, HIGH );  // make sure it starts up OFF
+  pinMode(HC05_POWER_ON_LOW_2  , OUTPUT); // 2 LOW is active
+
   Serial.begin(9600);
   while (!Serial) ; // wait for serial port to connect. Needed for native USB
   
@@ -102,7 +105,9 @@ void setup(){
   matrix.writeDigitNum(3, 8 , true);
   matrix.writeDigitNum(4, 8 , true);
   matrix.writeDisplay();
-  
+
+  digitalWrite(HC05_POWER_ON_LOW_2, LOW );  // now turn the HC05 on 
+
   //  init LEDs     //////////////////////////
   for (int i=0; i<5; i++) {
     pinMode( panelLedArr[i], OUTPUT);
@@ -126,8 +131,8 @@ void setup(){
   pinMode(INTAKE_BUTTON   , INPUT_PULLUP); // 7 LOW is INATKE
   pinMode(TEST_SWITCH     , INPUT_PULLUP); // 4 LOW is on
   pinMode(R_STICK_BUTTON  , INPUT_PULLUP); // 3 LOW is active
-  pinMode(L_STICK_BUTTON  , INPUT_PULLUP); // 2 LOW is active
-
+  // pin 2 is setup at beginning
+  
   triggerTime = millis() + 3000;  // 3 seconds from now
   delay(2000);
   altser.println();
@@ -140,7 +145,7 @@ void setup(){
     altser.println("Runtime Monitor is disabled");
   }
   // assume sticks are centered, store offset
-//  stickLxOffset = 512 - 243; //analogRead(L_STICK_Y);
+//  stickLxOffset = 512 - 306; //analogRead(L_STICK_Y);
 //  stickLyOffset = 512 - 306; //analogRead(L_STICK_X);
 //  stickRxOffset = 512 - 235; //analogRead(R_STICK_Y);
 //  stickRyOffset = 512 - 161; //analogRead(R_STICK_X);
@@ -153,10 +158,10 @@ void loop(){
   // read our potentiometers and buttons and store raw data in data structure for transmission
   txdata.stickLy = ( (analogRead(L_STICK_X)+stickLxOffset)<<2) - 1536;
   txdata.stickLx = ( (analogRead(L_STICK_X)+stickLyOffset)<<2) - 1536; // ly not used
-  txdata.stickLbutton = !digitalRead(L_STICK_BUTTON);
+  txdata.stickLbutton = LOW;   // no STICK BUTTONs attached
   txdata.stickRy = ( (analogRead(R_STICK_X)+stickRxOffset)<<2) - 1536;
   txdata.stickRx = ( (analogRead(R_STICK_Y)+stickRyOffset)<<2) - 1536;
-  txdata.stickRbutton = !digitalRead(R_STICK_BUTTON);
+  txdata.stickRbutton = LOW;
 
   txdata.drivemode = !digitalRead(DRIVE_MODE);
   txdata.enabled = !digitalRead(SYSTEM_ENABLE);
@@ -301,14 +306,11 @@ void loop(){
     wireTimer1 = millis(); // reset
     wireTimer0 = micros();
 
-    // print a floating point 
-    //matrix.print( ((double)txdata.shooterspeed) / 100000.0 );  //rxdata.supplyvoltagereading
-
-    calctemp = (txdata.shooterspeed*15) / 105; //  (rxdata.supplyvoltagereading*15) / 105; //tenths of a volt resolution
+    calctemp = (rxdata.supplyvoltagereading*15) / 105; //tenths of a volt resolution
     matrix.writeDigitNum(0, (calctemp/10) % 10 , true);
     matrix.writeDigitNum(1, calctemp % 10 , false);
     matrix.drawColon(true);
-    calctemp = (txdata.shooterspeed * 15) / 155;
+    calctemp = (txdata.shooterspeed * 15) / 152;
     if ( abs(calctemp-speeddisplay)>1 ) {
       speeddisplay = calctemp;
     }
