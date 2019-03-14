@@ -306,7 +306,7 @@ void loop(){
     wireTimer1 = millis(); // reset
     wireTimer0 = micros();
 
-    calctemp = (rxdata.supplyvoltagereading*15) / 105; //tenths of a volt resolution
+    calctemp = ((rxdata.supplyvoltagereading*15)+17) / 142; //tenths of a volt resolution
     matrix.writeDigitNum(0, (calctemp/10) % 10 , true);
     matrix.writeDigitNum(1, calctemp % 10 , false);
     matrix.drawColon(true);
